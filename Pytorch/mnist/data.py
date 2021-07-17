@@ -1,4 +1,4 @@
-import os, gzip, argparse
+import os, gzip, argparse, logging
 import numpy as np
 import tkinter as tk
 from PIL import Image, ImageTk
@@ -52,8 +52,12 @@ class Data:
 
 
 def get_rand_img(images, labels, n=10):
-    rand_num = np.random.randint(0, high=len(images), size=n, dtype=int)
+    """ Select random image """
+    # Get random number with n size for index
+    rand_num = np.random.randint(0, high=len(images), size=n, dtype=np.int32)
+    # Select image based in the random number
     rand_images = images[rand_num]
+    # Make a list of ImageTK
     img = [
         ImageTk.PhotoImage(
             image=Image.fromarray(np.asarray(x).squeeze()).resize((200, 200)))
@@ -63,6 +67,7 @@ def get_rand_img(images, labels, n=10):
 
 
 class MainWindow:
+    """ Main window for showing random image """
     def __init__(self, root, images, labels):
         self.parent = tk.Frame(root)
         self.canvas = tk.Canvas(self.parent, width=200, height=200)
@@ -79,19 +84,20 @@ class MainWindow:
 
         self.canvas_img = self.canvas.create_image(
             0, 0, anchor="nw", image=self.images[self.state])
-        self.text.set(self.labels[self.state])
+        self.text.set(f'Label : {self.labels[self.state]}')
 
         self.button = tk.Button(root, text="next", command=self.onClick)
         self.button.pack(expand=1)
 
     def onClick(self):
+        """ Change image when button clicked """
         if self.state + 1 >= len(self.images):
             self.images, self.labels = get_rand_img(images, labels)
             self.state = 0
         else:
             self.state += 1
         self.canvas.itemconfig(self.canvas_img, image=self.images[self.state])
-        self.text.set(self.labels[self.state])
+        self.text.set(f'Label : {self.labels[self.state]}')
 
 
 if __name__ == "__main__":
@@ -104,12 +110,19 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.random_show:
+        logging.basicConfig(format='[ %(levelname)s ] %(message)s',
+                            level=logging.INFO)
+        logging.info(f'Showing randow image for {args.random_show} data')
+
+        logging.info(f'Extracting {args.random_show} data')
         data = Data()
         images = data._extract_image(args.random_show)
         labels = data._extract_label(args.random_show)
 
+        logging.info('Opening randow image GUI')
         root = tk.Tk()
         root.title("Random Image")
         root.geometry("270x270")
         MainWindow(root, images, labels)
         root.mainloop()
+        logging.info('Closing GUI')
