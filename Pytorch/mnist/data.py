@@ -24,7 +24,7 @@ class Data:
     }
 
     def _extract_image(self, which):
-        """ Extrack images """
+        """ Extract images """
         path = os.path.join(self.CONFIG["dir"], self.CONFIG[which]["images"])
         f = gzip.open(path, 'r')
         f.read(16)  # skip line
@@ -35,6 +35,13 @@ class Data:
         data = data.reshape(self.CONFIG[which]["n_items"],
                             self.CONFIG["image_size"],
                             self.CONFIG["image_size"], 1)
+        return data
+
+    def extract_prep_images(self, which):
+        """ Extract and preprocessing images dataset """
+        data = self._extract_image(which)
+        # Normalize
+        data = data / 255.0
         return data
 
     def _extract_label(self, which):
