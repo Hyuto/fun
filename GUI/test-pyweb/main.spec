@@ -5,9 +5,9 @@ block_cipher = None
 
 
 a = Analysis(['main.py'],
-             pathex=['C:\\Users\\Wahyu Setianto\\Desktop\\fun\\GUI\\test-pyweb'],
+             pathex=['.'],
              binaries=[],
-             datas=[('*', './frontend')],
+             datas=[('./frontend', './frontend')],
              hiddenimports=[],
              hookspath=[],
              hooksconfig={},
@@ -24,7 +24,7 @@ exe = EXE(pyz,
           a.scripts, 
           [],
           exclude_binaries=True,
-          name='main',
+          name='ToDos',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
@@ -33,7 +33,7 @@ exe = EXE(pyz,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
-          entitlements_file=None )
+          entitlements_file=None , icon='./frontend/static/favicon.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
@@ -41,4 +41,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='main')
+               name='ToDos')
