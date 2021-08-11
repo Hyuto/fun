@@ -4,4 +4,4 @@ Let's learn `pytorch` framework
 
 ## Content
 
-1. [MNIST](./minst/README.md)
+1. [MNIST](./mnist/README.md)
