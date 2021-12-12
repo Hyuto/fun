@@ -1,13 +1,13 @@
 import argparse, os, time, logging
 
 # Set environment variables
-os.environ['OPENCV_LOG_LEVEL'] = 'OFF'
+os.environ["OPENCV_LOG_LEVEL"] = "OFF"
 
 import numpy as np
 import cv2
 
 # Global Config
-logging.basicConfig(format='[ %(levelname)s ] %(message)s', level=logging.INFO)
+logging.basicConfig(format="[ %(levelname)s ] %(message)s", level=logging.INFO)
 
 # Tracker
 # Fast with treshold=65 and nunmaxSuppression=5
@@ -20,9 +20,9 @@ def feature_tracker(detector, frame):
     # Tracking feature
     # Use goodFeaturesToTrack by default if user did
     # not specified detector and wrongly type detector
-    if detector.lower() == 'fast':
+    if detector.lower() == "fast":
         kp = FAST.detect(frame, None)
-    elif detector.lower() == 'orb':
+    elif detector.lower() == "orb":
         kp = ORB.detect(frame, None)
     else:
         # Change to grayscale, find corners and
@@ -31,7 +31,8 @@ def feature_tracker(detector, frame):
         # goodFeaturesToTrack with maxCorner=2000, qualityLevel=0.001,
         # and minDistance=0.1 using HarrisDetector
         corners = cv2.goodFeaturesToTrack(
-            gray, 2000, 0.01, 0.1, useHarrisDetector=True)  # detect corner
+            gray, 2000, 0.01, 0.1, useHarrisDetector=True
+        )  # detect corner
         for i in np.int0(corners):  # Loop trough every corner
             x, y = i.ravel()
             cv2.circle(frame, (x, y), 3, (0, 255, 0), 1)  # draw circle
@@ -43,28 +44,23 @@ def feature_tracker(detector, frame):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Feature Tracking using OpenCV")
-    parser.add_argument("-s",
-                        "--source",
-                        help="Source Video",
-                        type=str,
-                        required=True)
-    parser.add_argument("-d",
-                        "--detector",
-                        help="Detector",
-                        type=str,
-                        default="Good Feature to Track")
+    parser = argparse.ArgumentParser(description="Feature Tracking using OpenCV")
+    parser.add_argument("-s", "--source", help="Source Video", type=str, required=True)
+    parser.add_argument(
+        "-d", "--detector", help="Detector", type=str, default="Good Feature to Track"
+    )
 
     args = parser.parse_args()
 
     # If source==0 then we use Webcam as source
-    if args.source == '0':
+    if args.source == "0":
         args.source = 0
+    elif not os.path.isfile(args.source):
+        raise FileNotFoundError("`source` arguments is not directing to right file.")
 
-    logging.info('Running Feature Tracker with :')
+    logging.info("Running Feature Tracker with :")
     print(f' * Source   : {"Webcam" if args.source == 0 else args.source}')
-    print(f' * Detector : {args.detector}')
+    print(f" * Detector : {args.detector}")
 
     # Open Video
     cap = cv2.VideoCapture(args.source)
@@ -76,7 +72,7 @@ if __name__ == "__main__":
     logging.info('Starting GUI, Please type "q" to exit.')
 
     while cap.isOpened():  # Loop trough the video
-        fps, start = '-', time.time()
+        fps, start = "-", time.time()
         ret, frame = cap.read()  # read
 
         # break when video has no more frame
@@ -85,14 +81,14 @@ if __name__ == "__main__":
 
         frame = cv2.resize(frame, (720, 480), interpolation=cv2.INTER_AREA)
 
-        # Main
+        # tracker
         frame = feature_tracker(args.detector, frame)
 
         # FPS counter
         try:
             fps = round(1 / (time.time() - start), 3)
         except ZeroDivisionError:  # if the time difference ~ 0
-            logging.warning('Zero divison when calculating fps')
+            logging.warning("Zero divison when calculating fps")
 
         # print FPS
         cv2.putText(
@@ -109,12 +105,12 @@ if __name__ == "__main__":
         cv2.imshow("Webcam" if args.source == 0 else args.source, frame)
 
         # Handle key q pressed to quit session
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            logging.info('Exited at')
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            logging.info("Exited at")
             break
 
     # Realease & destroy windows
     cap.release()
     cv2.destroyAllWindows()
 
-    logging.info('Done!')
+    logging.info("Done!")

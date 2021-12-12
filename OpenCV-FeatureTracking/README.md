@@ -25,7 +25,7 @@ python feature-tracker.py -s 0
 
 **Change Detector**
 
-The detector by default is set to be `Good Feature to Track` module from `OpenCV`, 
+The detector by default is set to be `Good Feature to Track` module from `OpenCV`,
 but you can use `FastFeatureDetector` or `ORB` by configuring `-d` args.
 
 ```bash

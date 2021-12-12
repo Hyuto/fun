@@ -8,11 +8,11 @@ Yann LeCun ~ [MNIST DATABASE of handwritten digits](http://yann.lecun.com/exdb/m
 
 **Description**
 
-* 60k training images 
-* 10 testing images
-* 28 x 28 pixel image shape
-* grayscale
-  
+- 60k training images
+- 10 testing images
+- 28 x 28 pixel image shape
+- grayscale
+
 **View data randomly**
 
 Using `data.py` script.

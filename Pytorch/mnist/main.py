@@ -5,14 +5,13 @@ import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 if __name__ == "__main__":
-
     data = Data()
 
-    train_images = torch.from_numpy(data.extract_prep_images('train'))
-    train_labels = torch.from_numpy(data._extract_label('train'))
+    train_images = torch.from_numpy(data.extract_prep_images("train"))
+    train_labels = torch.from_numpy(data._extract_label("train"))
 
-    test_images = torch.from_numpy(data.extract_prep_images('test'))
-    test_labels = torch.from_numpy(data._extract_label('test'))
+    test_images = torch.from_numpy(data.extract_prep_images("test"))
+    test_labels = torch.from_numpy(data._extract_label("test"))
 
     # Config
     batch_size = 32
