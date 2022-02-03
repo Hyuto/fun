@@ -3,3 +3,6 @@ dist/
 build/
 env
 main/
+
+node_modules/
+.parcel-cache/

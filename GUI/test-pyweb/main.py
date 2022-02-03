@@ -1,15 +1,21 @@
+import os
 import webview
 from flask import Flask, send_from_directory
 
-DEBUG = False
+DEBUG = True
+MAIN_DIR = os.path.join(".", "front", "dist")
 
-server = Flask("__main__", template_folder="frontend", static_folder="frontend/static")
+if DEBUG:
+    os.system('start cmd /K "cd front && npm start"')
+
+server = Flask("__main__", static_folder=MAIN_DIR, static_url_path="/")
 
 
 @server.route("/")
 def serve():
-    return send_from_directory(server.template_folder, "index.html")
+    return send_from_directory(server.static_folder, "index.html")
 
 
-window = webview.create_window("test-pyweb", server)
-webview.start(debug=DEBUG)
+if __name__ == "__main__":
+    window = webview.create_window("test-pyweb", server)
+    webview.start(debug=DEBUG)
