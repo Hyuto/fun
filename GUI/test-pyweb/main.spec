@@ -7,7 +7,7 @@ block_cipher = None
 a = Analysis(['main.py'],
              pathex=['.'],
              binaries=[],
-             datas=[('./frontend', 'frontend')],
+             datas=[('./dist', 'frontend')],
              hiddenimports=[],
              hookspath=[],
              hooksconfig={},
@@ -37,4 +37,4 @@ exe = EXE(pyz,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
-          entitlements_file=None , icon='./frontend/static/favicon.ico')
+          entitlements_file=None , icon='./public/favicon.ico')

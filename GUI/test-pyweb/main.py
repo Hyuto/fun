@@ -1,21 +1,23 @@
-import os
+import os, sys
+import time, signal
 import webview
-from flask import Flask, send_from_directory
-
-DEBUG = True
-MAIN_DIR = os.path.join(".", "front", "dist")
+from subprocess import Popen, PIPE
+from config import MAIN_DIR, DEBUG
 
 if DEBUG:
-    os.system('start cmd /K "cd front && npm start"')
-
-server = Flask("__main__", static_folder=MAIN_DIR, static_url_path="/")
-
-
-@server.route("/")
-def serve():
-    return send_from_directory(server.static_folder, "index.html")
+    front = Popen("yarn dev -p 8080", stdout=PIPE, shell=True)
+    server = Popen([sys.executable, "server.py"], stdout=PIPE)
 
 
 if __name__ == "__main__":
-    window = webview.create_window("test-pyweb", server)
-    webview.start(debug=DEBUG)
+    if DEBUG:
+        time.sleep(1)
+        # os.path.join(MAIN_DIR, "index.html")
+
+    window = webview.create_window(
+        "react-flask-pywebview app", "http://localhost:8080/", width=600, height=1200
+    )
+    webview.start(http_server=True, debug=DEBUG)
+
+    os.kill(front.pid, signal.CTRL_C_EVENT)
+    os.kill(server.pid, signal.CTRL_C_EVENT)

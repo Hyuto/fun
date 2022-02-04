@@ -1,13 +1,15 @@
 {
-  "name": "front",
+  "name": "test-pywebview",
   "version": "1.0.0",
   "license": "MIT",
   "source": "./public/index.html",
   "scripts": {
-    "start": "parcel",
+    "dev": "parcel serve",
     "build": "parcel build --public-url ."
   },
   "devDependencies": {
+    "@parcel/packager-raw-url": "^2.2.1",
+    "@parcel/transformer-webmanifest": "^2.2.1",
     "parcel": "^2.2.1"
   },
   "dependencies": {
