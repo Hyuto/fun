@@ -1,23 +1,27 @@
-import os, sys
-import time, signal
+import os
+import time
 import webview
-from subprocess import Popen, PIPE
-from config import MAIN_DIR, DEBUG
+from flask import Flask, send_from_directory
 
-if DEBUG:
-    front = Popen("yarn dev -p 8080", stdout=PIPE, shell=True)
-    server = Popen([sys.executable, "server.py"], stdout=PIPE)
+# CONFIG
+DEBUG = True
+MAIN_DIR = os.path.join(".", "dist")
+
+# SERVER
+server = Flask(__name__, static_folder=MAIN_DIR, static_url_path="/")
+server.debug = DEBUG
+
+
+@server.route("/", defaults={"path": ""})
+@server.route("/<path:path>")
+def serve(path):
+    if path != "" and os.path.exists(server.static_folder + "/" + path):
+        return send_from_directory(server.static_folder, path)
+    else:
+        return send_from_directory(server.static_folder, "index.html")
 
 
 if __name__ == "__main__":
-    if DEBUG:
-        time.sleep(1)
-        # os.path.join(MAIN_DIR, "index.html")
-
-    window = webview.create_window(
-        "react-flask-pywebview app", "http://localhost:8080/", width=600, height=1200
-    )
-    webview.start(http_server=True, debug=DEBUG)
-
-    os.kill(front.pid, signal.CTRL_C_EVENT)
-    os.kill(server.pid, signal.CTRL_C_EVENT)
+    window = webview.create_window("react-flask-pywebview app", server)
+    # window.evaluate_js("window.location.reload()")
+    webview.start(debug=DEBUG)

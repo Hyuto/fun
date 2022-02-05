@@ -1,24 +1,21 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import PyInstaller.config
 
+PyInstaller.config.CONF['distpath'] = "./publish"
 block_cipher = None
 
-
-a = Analysis(['main.py'],
+a = Analysis(['.\\main.py'],
              pathex=['.'],
-             binaries=[],
-             datas=[('./dist', 'frontend')],
+             binaries=None,
+             datas=[('.\\dist', 'dist')],
              hiddenimports=[],
-             hookspath=[],
-             hooksconfig={},
-             runtime_hooks=[],
              excludes=[],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
-             cipher=block_cipher,
-             noarchive=False)
-pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(pyz,
           a.scripts,
@@ -26,15 +23,11 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,  
           [],
-          name='ToDos',
+          name='react-flask-pywebview-app',
           debug=False,
-          bootloader_ignore_signals=False,
           strip=False,
           upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
           console=False,
-          disable_windowed_traceback=False,
-          target_arch=None,
-          codesign_identity=None,
-          entitlements_file=None , icon='./public/favicon.ico')
+          icon='.\\public\\favicon.ico')

@@ -4,7 +4,7 @@
   "license": "MIT",
   "source": "./public/index.html",
   "scripts": {
-    "dev": "parcel serve",
+    "dev": "parcel watch",
     "build": "parcel build --public-url ."
   },
   "devDependencies": {

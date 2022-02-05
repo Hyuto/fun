@@ -1,8 +1,8 @@
 __pycache__/
 dist/
 build/
-env
-main/
+publish/
+env/
 
 node_modules/
 .parcel-cache/
