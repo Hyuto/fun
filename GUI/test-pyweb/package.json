@@ -1,6 +1,6 @@
 {
-  "name": "test-pywebview",
-  "version": "1.0.0",
+  "name": "react-flask-pywebview-app",
+  "version": "0.1.0",
   "license": "MIT",
   "source": "./public/index.html",
   "scripts": {
