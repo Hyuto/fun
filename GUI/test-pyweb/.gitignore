@@ -2,7 +2,7 @@ __pycache__/
 dist/
 build/
 publish/
-env/
+webview-env/
 
 node_modules/
 .parcel-cache/

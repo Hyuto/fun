@@ -3,14 +3,20 @@
   "version": "0.1.0",
   "license": "MIT",
   "source": "./public/index.html",
+  "type": "module",
   "scripts": {
+    "build": "node ./utils/helper.js --build",
     "dev": "parcel watch",
-    "build": "parcel build --public-url ."
+    "init": "yarn && node ./utils/helper.js --setup",
+    "start": ".\\env\\Scripts\\python main.py"
   },
   "devDependencies": {
     "@parcel/packager-raw-url": "^2.2.1",
     "@parcel/transformer-webmanifest": "^2.2.1",
-    "parcel": "^2.2.1"
+    "execa": "^6.0.0",
+    "listr": "^0.14.3",
+    "parcel": "^2.2.1",
+    "yargs": "^17.3.1"
   },
   "dependencies": {
     "react": "^17.0.2",

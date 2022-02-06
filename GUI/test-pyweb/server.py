@@ -1,13 +1,16 @@
-import os, json
-import getpass
+import os
+import json
+import argparse
 import webview
 from flask import Flask, render_template, jsonify, request
 from functools import wraps
+import getpass  # get user
 
 MAIN_DIR = os.path.join(".", "dist")
 
 server = Flask(__name__, template_folder=MAIN_DIR, static_folder=MAIN_DIR, static_url_path="/")
 server.config["SEND_FILE_MAX_AGE_DEFAULT"] = 1
+server.debug = False
 
 
 def verify_token(function):
@@ -39,3 +42,16 @@ def serve(path):
 @verify_token
 def initialize():
     return jsonify({"user": getpass.getuser()})
+
+
+def DEV(port):
+    # run server
+    server.run(port=port, threaded=True, debug=True, reloader_type="stat")
+
+
+if __name__ == "__main__":
+    # Development
+    parser = argparse.ArgumentParser(description="Flask Server")
+    parser.add_argument("-p", "--dev-port", help="Development Port", type=str)
+    args = parser.parse_args()
+    DEV(args.dev_port)
