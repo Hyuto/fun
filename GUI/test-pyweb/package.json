@@ -8,7 +8,7 @@
     "build": "node ./utils/helper.js --build",
     "dev": "parcel watch",
     "init": "yarn && node ./utils/helper.js --setup",
-    "start": ".\\env\\Scripts\\python main.py"
+    "start": "node ./utils/helper.js --start"
   },
   "devDependencies": {
     "@parcel/packager-raw-url": "^2.2.1",

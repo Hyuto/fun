@@ -7,6 +7,8 @@ import Listr from "listr";
 const argv = yargs(hideBin(process.argv))
   .usage("$0 <command>")
   .command("setup", "Setup python and dependencies")
+  .command("start", "Start Application")
+  .command("build", "Build Application")
   .parse();
 
 if (argv.setup) {
@@ -57,6 +59,27 @@ if (argv.setup) {
     .catch((err) => {
       console.error(err);
     });
+}
+
+if (argv.start) {
+  console.log("Start Application");
+  let command = "";
+
+  switch (process.platform) {
+    case "win32":
+      command = ".\\webview-env\\Scripts\\python main.py";
+      break;
+    default:
+      command = "./webview-env/bin/python main.py";
+      break;
+  }
+
+  try {
+    // Update to stream stdout
+    await execa(command);
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 if (argv.build) {
