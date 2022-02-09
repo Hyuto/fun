@@ -5,19 +5,26 @@ to handle the backend.
 
 ## Run on local
 
-Run the app on your local system. Clone this repo, setup `venv`, and install
-requirements for this project.
-
-Run **App**
-
-```
-python main.py
-```
-
-## Build into Executable
-
-For linux and windows only
+Run the app on your local system. Clone this repo and run this commands on your terminal
 
 ```bash
-pyinstaller main.spec
+yarn run init
+```
+
+that will install all dependencies to run the app.
+
+**Start the Application**
+
+Start the application using this command
+
+```bash
+yarn start
+```
+
+**Build the Application**
+
+Build the application using this command
+
+```bash
+yarn build
 ```
