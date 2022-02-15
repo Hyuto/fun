@@ -1,5 +1,7 @@
 # Test Application for `PyWebView` library
 
+![sample](sample.png)
+
 **Goals** : Build an app using `PyWebView` using `react` for the frontend and `flask`
 to handle the backend.
 
@@ -15,7 +17,13 @@ that will install all dependencies to run the app.
 
 **Start the Application**
 
-Start the application using this command
+On your terminal run this command to watch your react application
+
+```bash
+yarn dev
+```
+
+Open up new terminal and run this command to start the app
 
 ```bash
 yarn start
