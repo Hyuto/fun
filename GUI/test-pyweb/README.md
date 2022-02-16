@@ -17,13 +17,7 @@ that will install all dependencies to run the app.
 
 **Start the Application**
 
-On your terminal run this command to watch your react application
-
-```bash
-yarn dev
-```
-
-Open up new terminal and run this command to start the app
+On your terminal run this command
 
 ```bash
 yarn start

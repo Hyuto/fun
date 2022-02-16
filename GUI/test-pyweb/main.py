@@ -6,6 +6,7 @@ DEBUG = True
 
 
 def WebViewApp():
+    server.debug = DEBUG
     window = webview.create_window("react-flask-pywebview-app", server)
     webview.start(debug=DEBUG)
 
