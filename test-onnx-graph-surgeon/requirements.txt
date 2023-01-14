@@ -1,6 +1,7 @@
 numpy==1.24.1
 onnx==1.13.0
-onnx-graphsurgeon==0.3.25
 onnxruntime==1.13.1
 onnxsim==0.4.10
 opencv-python-headless==4.6.0.66
+--extra-index-url https://pypi.ngc.nvidia.com
+onnx-graphsurgeon==0.3.25

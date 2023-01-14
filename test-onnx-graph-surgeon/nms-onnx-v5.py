@@ -158,11 +158,11 @@ if __name__ == "__main__":
     model, check = simplify(gs.export_onnx(graph))
     assert check, "Simplified ONNX model could not be validated"
 
-    yolov5 = ort.InferenceSession("yolov5s.onnx")
+    yolov5 = ort.InferenceSession("yolov5n.onnx")
     nms = ort.InferenceSession(model.SerializeToString())
     nms_config = np.asarray([100, 0.45, 0.2], dtype=np.float32)
 
-    img = cv2.imread("2017_10_06_33730_1507275933._large.jpg")
+    img = cv2.imread("zidane.jpg")
     img = cv2.dnn.blobFromImage(img, 1 / 255.0, (640, 640), swapRB=False, crop=False)
 
     output = yolov5.run(None, {"images": img})
