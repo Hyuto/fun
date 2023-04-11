@@ -202,7 +202,7 @@ if __name__ == "__main__":
     selected.shape = [1, None, None]
 
     graph.inputs = [input_, config]
-    graph.outputs = [selected, scores]
+    graph.outputs = [selected]
 
     graph.cleanup().toposort()
     graph.fold_constants().cleanup()
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     model, check = simplify(gs.export_onnx(graph))
     assert check, "Simplified ONNX model could not be validated"
 
-    yolov5 = ort.InferenceSession("yolov8n.onnx")
+    yolov5 = ort.InferenceSession("yolov8n-seg.onnx")
     nms = ort.InferenceSession(model.SerializeToString())
     nms_config = np.asarray([80, 100, 0.45, 0.2], dtype=np.float32)
 
