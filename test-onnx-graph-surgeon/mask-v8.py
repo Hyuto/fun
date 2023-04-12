@@ -186,6 +186,7 @@ if __name__ == "__main__":
     input_ = gs.Variable(name="detection", dtype=np.float32, shape=(None,))
     mask_det = gs.Variable(name="mask", dtype=np.float32, shape=(1, None, None, None))
     mask_config = gs.Variable(name="config", dtype=np.float32, shape=(9,))
+    overlay = gs.Variable(name="overlay", dtype=np.uint8, shape=(None, None, 4))
 
     mask_det_shape = graph.cast(graph.shape(mask_det), to=1)
     mask_chanel = graph.slice_(
@@ -359,19 +360,16 @@ if __name__ == "__main__":
         ]
     )
 
-    mask_filter = graph.pad(
-        graph.where(
-            graph.greater_equal(protos, np.asarray([0.5], dtype=np.float32)),
-            color,
-            np.asarray([0, 0, 0, 0], dtype=np.uint8),
-        ),
-        pad_size,
+    mask_filter = graph.where(
+        graph.pad(graph.greater_equal(protos, np.asarray([0.5], dtype=np.float32)), pad_size),
+        color,
+        overlay,
     )
     mask_filter.dtype = np.uint8
     mask_filter.shape = [None, None, 4]
     mask_filter.name = "mask_filter"
 
-    graph.inputs = [input_, mask_det, mask_config]
+    graph.inputs = [input_, mask_det, mask_config, overlay]
     graph.outputs = [mask_filter]
 
     graph.cleanup().toposort()
@@ -402,7 +400,6 @@ if __name__ == "__main__":
     max_size = max(source_width, source_height)  # get max size
     source_padded = np.zeros((max_size, max_size, 3), dtype=np.uint8)  # initial zeros mat
     source_padded[:source_height, :source_width] = source.copy()  # place original image
-    overlay = source_padded.copy()  # make overlay mat
 
     ## ratios
     x_ratio = max_size / 640
@@ -453,6 +450,7 @@ if __name__ == "__main__":
                 "detection": np.asarray([*box, *masked], dtype=np.float32),
                 "mask": output[1],
                 "config": np.asarray([max_size, *box, 255, 255, 255, 255], dtype=np.float32),
+                "overlay": all_mask,
             },
         )
 
@@ -463,7 +461,7 @@ if __name__ == "__main__":
         # cv2.imwrite(f"output/pred{i}.png", test_out[0])
         # cv2.imwrite(f"output/val{i}.png", mask)
 
-        all_mask = cv2.addWeighted(all_mask, 1, test_out[0], 1, 0)
+        all_mask = test_out[0]
 
     cv2.imwrite(f"val.png", all_mask)
     onnx.save(model, "mask-yolov8-seg.onnx")  # saving onnx model
