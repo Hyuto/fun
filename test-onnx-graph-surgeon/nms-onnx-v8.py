@@ -14,6 +14,11 @@ def add(self, a, b):
 
 
 @gs.Graph.register()
+def sub(self, a, b):
+    return self.layer(op="Sub", inputs=[a, b], outputs=["sub_out_gs"])[0]
+
+
+@gs.Graph.register()
 def slice(self, data, start, end, axis=2):
     return self.layer(op="Slice", inputs=[data, start, end, axis], outputs=["slice_out_gs"])[0]
 
@@ -96,16 +101,19 @@ if __name__ == "__main__":
     graph = gs.Graph()
 
     input_ = gs.Variable(name="detection", dtype=np.float32, shape=(1, None, None))
-    config = gs.Variable(name="config", dtype=np.float32, shape=(4,))
+    config = gs.Variable(name="config", dtype=np.float32, shape=(3,))
 
-    num_class = graph.cast(
-        graph.slice(
-            config,
-            start=np.asarray([0], dtype=np.int32),
-            end=np.asarray([1], dtype=np.int32),
-            axis=np.asarray([0], dtype=np.int32),
+    num_class = graph.sub(
+        graph.cast(
+            graph.slice(
+                graph.shape(input_),
+                start=np.asarray([2], dtype=np.int32),
+                end=np.asarray([3], dtype=np.int32),
+                axis=np.asarray([0], dtype=np.int32),
+            ),
+            to=6,
         ),
-        to=6,
+        np.asarray([4], dtype=np.int32),
     )
     num_class.name = "num-class"
     num_class.dtype = np.int32
@@ -114,8 +122,8 @@ if __name__ == "__main__":
     topk = graph.cast(
         graph.slice(
             config,
-            start=np.asarray([1], dtype=np.int32),
-            end=np.asarray([2], dtype=np.int32),
+            start=np.asarray([0], dtype=np.int32),
+            end=np.asarray([1], dtype=np.int32),
             axis=np.asarray([0], dtype=np.int32),
         ),  # slice topk from outputs
         to=7,
@@ -126,8 +134,8 @@ if __name__ == "__main__":
 
     iou_tresh = graph.slice(
         config,
-        start=np.asarray([2], dtype=np.int32),
-        end=np.asarray([3], dtype=np.int32),
+        start=np.asarray([1], dtype=np.int32),
+        end=np.asarray([2], dtype=np.int32),
         axis=np.asarray([0], dtype=np.int32),
     )  # slice iou_tresh from outputs
     iou_tresh.name = "iou_tresh"
@@ -136,8 +144,8 @@ if __name__ == "__main__":
 
     score_tresh = graph.slice(
         config,
-        start=np.asarray([3], dtype=np.int32),
-        end=np.asarray([4], dtype=np.int32),
+        start=np.asarray([2], dtype=np.int32),
+        end=np.asarray([3], dtype=np.int32),
         axis=np.asarray([0], dtype=np.int32),
     )  # slice score_tresh from outputs
     score_tresh.name = "score_tresh"
@@ -146,15 +154,15 @@ if __name__ == "__main__":
 
     input_T = graph.transpose(input_, axis=np.asarray((0, 2, 1), dtype=np.int32))
 
-    boxes = graph.slice(
+    bboxes = graph.slice(
         input_T,
         start=np.asarray([0], dtype=np.int32),
         end=np.asarray([4], dtype=np.int32),
         axis=np.asarray([2], dtype=np.int32),
     )  # slice boxes from outputs
-    boxes.name = "raw-boxes"
-    boxes.dtype = np.float32
-    boxes.shape = [1, None, 4]
+    bboxes.name = "raw-boxes"
+    bboxes.dtype = np.float32
+    bboxes.shape = [1, None, 4]
 
     scores = graph.slice(
         input_T,
@@ -174,7 +182,7 @@ if __name__ == "__main__":
     max_scores.shape = [1, None, 1]
 
     nms = graph.non_max_suppression(
-        boxes,
+        bboxes,
         graph.transpose(
             max_scores, axis=np.asarray((0, 2, 1), dtype=np.int32)
         ),  # transpose confidences [1, num_det, 1] to [1, 1, num_det]
@@ -215,7 +223,7 @@ if __name__ == "__main__":
 
     yolov5 = ort.InferenceSession("yolov8n-seg.onnx")
     nms = ort.InferenceSession(model.SerializeToString())
-    nms_config = np.asarray([80, 100, 0.45, 0.2], dtype=np.float32)
+    nms_config = np.asarray([100, 0.45, 0.3], dtype=np.float32)
 
     img = cv2.imread("zidane.jpg")
     source_height, source_width, _ = img.shape

@@ -14,18 +14,8 @@ def add(self, a, b):
 
 
 @gs.Graph.register()
-def sub(self, a, b):
-    return self.layer(op="Sub", inputs=[a, b], outputs=["sub_out_gs"])[0]
-
-
-@gs.Graph.register()
 def slice(self, data, start, end, axis=2):
     return self.layer(op="Slice", inputs=[data, start, end, axis], outputs=["slice_out_gs"])[0]
-
-
-@gs.Graph.register()
-def shape(self, data):
-    return self.layer(op="Shape", inputs=[data], outputs=["shape_out_gs"])[0]
 
 
 @gs.Graph.register()
@@ -101,19 +91,16 @@ if __name__ == "__main__":
     graph = gs.Graph()
 
     input_ = gs.Variable(name="detection", dtype=np.float32, shape=(1, None, None))
-    config = gs.Variable(name="config", dtype=np.float32, shape=(3,))
+    config = gs.Variable(name="config", dtype=np.float32, shape=(4,))
 
-    num_class = graph.sub(
-        graph.cast(
-            graph.slice(
-                graph.shape(input_),
-                start=np.asarray([2], dtype=np.int32),
-                end=np.asarray([3], dtype=np.int32),
-                axis=np.asarray([0], dtype=np.int32),
-            ),
-            to=6,
+    num_class = graph.cast(
+        graph.slice(
+            config,
+            start=np.asarray([0], dtype=np.int32),
+            end=np.asarray([1], dtype=np.int32),
+            axis=np.asarray([0], dtype=np.int32),
         ),
-        np.asarray([4], dtype=np.int32),
+        to=6,
     )
     num_class.name = "num-class"
     num_class.dtype = np.int32
@@ -122,8 +109,8 @@ if __name__ == "__main__":
     topk = graph.cast(
         graph.slice(
             config,
-            start=np.asarray([0], dtype=np.int32),
-            end=np.asarray([1], dtype=np.int32),
+            start=np.asarray([1], dtype=np.int32),
+            end=np.asarray([2], dtype=np.int32),
             axis=np.asarray([0], dtype=np.int32),
         ),  # slice topk from outputs
         to=7,
@@ -134,52 +121,61 @@ if __name__ == "__main__":
 
     iou_tresh = graph.slice(
         config,
-        start=np.asarray([1], dtype=np.int32),
-        end=np.asarray([2], dtype=np.int32),
+        start=np.asarray([2], dtype=np.int32),
+        end=np.asarray([3], dtype=np.int32),
         axis=np.asarray([0], dtype=np.int32),
     )  # slice iou_tresh from outputs
     iou_tresh.name = "iou_tresh"
     iou_tresh.dtype = np.float32
     iou_tresh.shape = [1]
 
-    conf_tresh = graph.slice(
+    score_tresh = graph.slice(
         config,
-        start=np.asarray([2], dtype=np.int32),
-        end=np.asarray([3], dtype=np.int32),
+        start=np.asarray([3], dtype=np.int32),
+        end=np.asarray([4], dtype=np.int32),
         axis=np.asarray([0], dtype=np.int32),
-    )  # slice conf_tresh from outputs
-    conf_tresh.name = "conf_tresh"
-    conf_tresh.dtype = np.float32
-    conf_tresh.shape = [1]
+    )  # slice score_tresh from outputs
+    score_tresh.name = "score_tresh"
+    score_tresh.dtype = np.float32
+    score_tresh.shape = [1]
 
-    bboxes = graph.slice(
-        input_,
+    input_T = graph.transpose(input_, axis=np.asarray((0, 2, 1), dtype=np.int32))
+
+    boxes = graph.slice(
+        input_T,
         start=np.asarray([0], dtype=np.int32),
         end=np.asarray([4], dtype=np.int32),
         axis=np.asarray([2], dtype=np.int32),
     )  # slice boxes from outputs
-    bboxes.name = "raw-boxes"
-    bboxes.dtype = np.float32
-    bboxes.shape = [1, None, 4]
+    boxes.name = "raw-boxes"
+    boxes.dtype = np.float32
+    boxes.shape = [1, None, 4]
 
-    confidences = graph.slice(
-        input_,
+    scores = graph.slice(
+        input_T,
         start=np.asarray([4], dtype=np.int32),
-        end=np.asarray([5], dtype=np.int32),
+        end=graph.add(num_class, np.asarray([4], dtype=np.int32)),
         axis=np.asarray([2], dtype=np.int32),
     )  # slice confidences from outputs
-    confidences.name = "raw-confidences"
-    confidences.dtype = np.float32
-    confidences.shape = [1, None, 1]
+    scores.name = "raw-scores"
+    scores.dtype = np.float32
+    scores.shape = [1, None, None]
+
+    max_scores = graph.reduce_max(
+        scores, axis=np.asarray([2], dtype=np.int32), keepdims=1
+    )  # slice confidences from outputs
+    max_scores.name = "max-scores"
+    max_scores.dtype = np.float32
+    max_scores.shape = [1, None, 1]
 
     nms = graph.non_max_suppression(
-        bboxes,
+        boxes,
         graph.transpose(
-            confidences, axis=np.asarray((0, 2, 1), dtype=np.int32)
+            max_scores, axis=np.asarray((0, 2, 1), dtype=np.int32)
         ),  # transpose confidences [1, num_det, 1] to [1, 1, num_det]
         max_output_boxes_per_class=topk,
         iou_threshold=iou_tresh,
-        score_threshold=conf_tresh,
+        score_threshold=score_tresh,
     )  # perform NMS using boxes and confidences as input
     nms.name = "NMS"
     nms.dtype = np.int64
@@ -193,7 +189,7 @@ if __name__ == "__main__":
     idx.dtype = np.int64
 
     selected = graph.squeeze(
-        graph.gather(input_, indices=idx, axis=1),  # indexing boxes
+        graph.gather(input_T, indices=idx, axis=1),  # indexing boxes
         axis=[1],
     )  # squeeze tensor dimension [1, 1, n, 4] to [1, n, 4]
     selected.name = "selected"
@@ -212,16 +208,25 @@ if __name__ == "__main__":
     model, check = simplify(gs.export_onnx(graph))
     assert check, "Simplified ONNX model could not be validated"
 
-    yolov5 = ort.InferenceSession("yolov5n.onnx")
+    yolov5 = ort.InferenceSession("yolov8n-seg.onnx")
     nms = ort.InferenceSession(model.SerializeToString())
-    nms_config = np.asarray([100, 0.45, 0.15], dtype=np.float32)
+    nms_config = np.asarray([80, 100, 0.45, 0.2], dtype=np.float32)
 
     img = cv2.imread("zidane.jpg")
-    img = cv2.dnn.blobFromImage(img, 1 / 255.0, (640, 640), swapRB=False, crop=False)
+    source_height, source_width, _ = img.shape
 
-    output = yolov5.run(None, {"images": img})
+    ## padding image
+    max_size = max(source_width, source_height)  # get max size
+    source_padded = np.zeros((max_size, max_size, 3), dtype=np.uint8)  # initial zeros mat
+    source_padded[:source_height, :source_width] = img.copy()  # place original image
+
+    source_padded = cv2.dnn.blobFromImage(
+        source_padded, 1 / 255.0, (640, 640), swapRB=False, crop=False
+    )
+
+    output = yolov5.run(None, {"images": source_padded})
     test_output = nms.run(None, {"detection": output[0], "config": nms_config})
 
     print(test_output[0].shape)
 
-    onnx.save(model, "nms-yolov5.onnx")  # saving onnx model
+    onnx.save(model, "nms-yolov8-seg.onnx")  # saving onnx model

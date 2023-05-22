@@ -9,23 +9,8 @@ from onnxsim import simplify
 
 
 @gs.Graph.register()
-def add(self, a, b):
-    return self.layer(op="Add", inputs=[a, b], outputs=["add_out_gs"])[0]
-
-
-@gs.Graph.register()
-def sub(self, a, b):
-    return self.layer(op="Sub", inputs=[a, b], outputs=["sub_out_gs"])[0]
-
-
-@gs.Graph.register()
 def slice(self, data, start, end, axis=2):
     return self.layer(op="Slice", inputs=[data, start, end, axis], outputs=["slice_out_gs"])[0]
-
-
-@gs.Graph.register()
-def shape(self, data):
-    return self.layer(op="Shape", inputs=[data], outputs=["shape_out_gs"])[0]
 
 
 @gs.Graph.register()
@@ -79,6 +64,16 @@ def squeeze(self, data, axis):
 
 
 @gs.Graph.register()
+def concat(self, inputs, axis=0):
+    return self.layer(
+        op="Concat",
+        inputs=inputs,
+        outputs=["concat_out_gs"],
+        attrs={"axis": axis},
+    )[0]
+
+
+@gs.Graph.register()
 def non_max_suppression(
     self,
     boxes,
@@ -86,7 +81,7 @@ def non_max_suppression(
     max_output_boxes_per_class,
     iou_threshold,
     score_threshold,
-    center_point_box=1,  # for yolo pytorch model
+    center_point_box=0,  # yxyx
 ):
     # Docs : https://github.com/onnx/onnx/blob/main/docs/Operators.md#NonMaxSuppression
     return self.layer(
@@ -98,26 +93,11 @@ def non_max_suppression(
 
 
 if __name__ == "__main__":
-    graph = gs.Graph()
+    graph = gs.Graph(opset=12)
 
-    input_ = gs.Variable(name="detection", dtype=np.float32, shape=(1, None, None))
+    bboxes = gs.Variable(name="bboxes", dtype=np.float32, shape=(1, None, 4))
+    raw_scores = gs.Variable(name="scores", dtype=np.float32, shape=(1, None, None))
     config = gs.Variable(name="config", dtype=np.float32, shape=(3,))
-
-    num_class = graph.sub(
-        graph.cast(
-            graph.slice(
-                graph.shape(input_),
-                start=np.asarray([2], dtype=np.int32),
-                end=np.asarray([3], dtype=np.int32),
-                axis=np.asarray([0], dtype=np.int32),
-            ),
-            to=6,
-        ),
-        np.asarray([4], dtype=np.int32),
-    )
-    num_class.name = "num-class"
-    num_class.dtype = np.int32
-    num_class.shape = [1]
 
     topk = graph.cast(
         graph.slice(
@@ -142,44 +122,36 @@ if __name__ == "__main__":
     iou_tresh.dtype = np.float32
     iou_tresh.shape = [1]
 
-    conf_tresh = graph.slice(
+    score_tresh = graph.slice(
         config,
         start=np.asarray([2], dtype=np.int32),
         end=np.asarray([3], dtype=np.int32),
         axis=np.asarray([0], dtype=np.int32),
-    )  # slice conf_tresh from outputs
-    conf_tresh.name = "conf_tresh"
-    conf_tresh.dtype = np.float32
-    conf_tresh.shape = [1]
+    )  # slice score_tresh from outputs
+    score_tresh.name = "score_tresh"
+    score_tresh.dtype = np.float32
+    score_tresh.shape = [1]
 
-    bboxes = graph.slice(
-        input_,
-        start=np.asarray([0], dtype=np.int32),
-        end=np.asarray([4], dtype=np.int32),
-        axis=np.asarray([2], dtype=np.int32),
-    )  # slice boxes from outputs
-    bboxes.name = "raw-boxes"
-    bboxes.dtype = np.float32
-    bboxes.shape = [1, None, 4]
+    bboxes_yxyx = graph.gather(bboxes, indices=np.asarray([1, 0, 3, 2], dtype=np.int32), axis=2)
+    bboxes_yxyx.name = "raw-boxes"
+    bboxes_yxyx.dtype = np.float32
+    bboxes_yxyx.shape = [1, None, 4]
 
-    confidences = graph.slice(
-        input_,
-        start=np.asarray([4], dtype=np.int32),
-        end=np.asarray([5], dtype=np.int32),
-        axis=np.asarray([2], dtype=np.int32),
+    max_scores = graph.reduce_max(
+        raw_scores, axis=np.asarray([2], dtype=np.int32), keepdims=1
     )  # slice confidences from outputs
-    confidences.name = "raw-confidences"
-    confidences.dtype = np.float32
-    confidences.shape = [1, None, 1]
+    max_scores.name = "max-scores"
+    max_scores.dtype = np.float32
+    max_scores.shape = [1, None, 1]
 
     nms = graph.non_max_suppression(
-        bboxes,
+        bboxes_yxyx,
         graph.transpose(
-            confidences, axis=np.asarray((0, 2, 1), dtype=np.int32)
+            max_scores, axis=np.asarray((0, 2, 1), dtype=np.int32)
         ),  # transpose confidences [1, num_det, 1] to [1, 1, num_det]
         max_output_boxes_per_class=topk,
         iou_threshold=iou_tresh,
-        score_threshold=conf_tresh,
+        score_threshold=score_tresh,
     )  # perform NMS using boxes and confidences as input
     nms.name = "NMS"
     nms.dtype = np.int64
@@ -193,14 +165,16 @@ if __name__ == "__main__":
     idx.dtype = np.int64
 
     selected = graph.squeeze(
-        graph.gather(input_, indices=idx, axis=1),  # indexing boxes
+        graph.gather(
+            graph.concat([bboxes, raw_scores], axis=2), indices=idx, axis=1
+        ),  # indexing boxes
         axis=[1],
     )  # squeeze tensor dimension [1, 1, n, 4] to [1, n, 4]
     selected.name = "selected"
     selected.dtype = np.float32
     selected.shape = [1, None, None]
 
-    graph.inputs = [input_, config]
+    graph.inputs = [bboxes, raw_scores, config]
     graph.outputs = [selected]
 
     graph.cleanup().toposort()
@@ -212,16 +186,25 @@ if __name__ == "__main__":
     model, check = simplify(gs.export_onnx(graph))
     assert check, "Simplified ONNX model could not be validated"
 
-    yolov5 = ort.InferenceSession("yolov5n.onnx")
+    yolo_nas = ort.InferenceSession("yolo_nas_s.onnx")
     nms = ort.InferenceSession(model.SerializeToString())
-    nms_config = np.asarray([100, 0.45, 0.15], dtype=np.float32)
+    nms_config = np.asarray([100, 0.45, 0.3], dtype=np.float32)
 
     img = cv2.imread("zidane.jpg")
-    img = cv2.dnn.blobFromImage(img, 1 / 255.0, (640, 640), swapRB=False, crop=False)
+    source_height, source_width, _ = img.shape
 
-    output = yolov5.run(None, {"images": img})
-    test_output = nms.run(None, {"detection": output[0], "config": nms_config})
+    ## padding image
+    max_size = max(source_width, source_height)  # get max size
+    source_padded = np.zeros((max_size, max_size, 3), dtype=np.uint8)  # initial zeros mat
+    source_padded[:source_height, :source_width] = img.copy()  # place original image
+
+    source_padded = cv2.dnn.blobFromImage(
+        source_padded, 1 / 255.0, (640, 640), swapRB=False, crop=False
+    )
+
+    output = yolo_nas.run(None, {yolo_nas.get_inputs()[0].name: source_padded})
+    test_output = nms.run(None, {"bboxes": output[0], "scores": output[1], "config": nms_config})
 
     print(test_output[0].shape)
 
-    onnx.save(model, "nms-yolov5.onnx")  # saving onnx model
+    onnx.save(model, "nms-yolo-nas.onnx")  # saving onnx model
